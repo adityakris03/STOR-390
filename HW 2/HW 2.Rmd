@@ -37,23 +37,36 @@ Above, I have given you a training-testing partition.  Train the KNN with $K = 5
 ```{r}
 set.seed(123)
 #STUDENT INPUT
+pr = knn(iris_train, iris_test, cl=iris_target_category, k=5)
+tab = table(pr, iris_test_category)
+
+accuracy <- function(x){
+  sum(diag(x)/(sum(rowSums(x)))) * 100
+}
+
+tab
+accuracy(tab)
 ```
 
 #
 
 Discuss your results.  If you have done this correctly, you should have a classification error rate that is roughly 20% higher than what we observed in class.  Why is this the case? In particular run a summary of the `iris_test_category` as well as `iris_target_category` and discuss how this plays a role in your answer.  
 
-*STUDENT INPUT* 
+```{r}
+summary(iris_test_category)
+summary(iris_target_category)
+```
+The train category has a lot less versicolor in its distribution than the test category from class. As a result, classifying this data becomes more difficult as the distinction between virginica and versicolor is slightly less defined due to lack of representation.
 
 #
 
 Choice of $K$ can also influence this classifier.  Why would choosing $K = 6$ not be advisable for this data? 
 
-*STUDENT INPUT*
+By taking the 6 nearest neighbors to make the decision to classify something, you run the risk of having even neighbors between 2 different groups causing issues when trying to classify similar classes like versicolor and virginica.
 
 #
 
 Build a github repository to store your homework assignments.  Share the link in this file.  
 
-*STUDENT INPUT*
+https://github.com/adityakris03/STOR-390
 
