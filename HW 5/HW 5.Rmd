@@ -1,0 +1,31 @@
+---
+title: "HW 5"
+author: "Aditya Krishna"
+date: "12/29/2023"
+output:
+  pdf_document: default
+  html_document:
+    number_sections: yes
+fontsize: 12pt
+---
+
+This homework is meant to give you practice in creating and defending a position with both statistical and philosophical evidence.  We have now extensively talked about the COMPAS ^[https://www.propublica.org/datastore/dataset/compas-recidivism-risk-score-data-and-analysis] data set, the flaws in applying it but also its potential upside if its shortcomings can be overlooked.  We have also spent time in class verbally assessing positions both for an against applying this data set in real life.  In no more than two pages ^[knit to a pdf to ensure page count] take the persona of a statistical consultant advising a judge as to whether they should include the results of the COMPAS algorithm in their decision making process for granting parole.  First clearly articulate your position (whether the algorithm should be used or not) and then defend said position using both statistical and philosophical evidence.  Your paper will be grade both on the merits of its persuasive appeal but also the applicability of the statistical and philosohpical evidence cited.  
+
+
+**STUDENT RESPONSE**
+
+The COMPAS (Correctional Offender Management Profiling for Alternative Sanctions) algorithm was designed to predict the likelihood of recidivism among offenders to help the justice system with determining parole. Using algorithms such as this would aid judges in the process, providing an objective and efficient resource to base their judgement. However, I believe COMPAS should not be used in the courtroom given its issues with statistical fairness, transparency, and ethical implications.
+
+COMPAS's mission is to predict the likelihood of recidivism among offenders. However, studies have shown that COMPAS exhibits inherent biases, particularly related to race - something unacceptable in a courtroom. An investigation by ProPublica in 2016 revealed that the algorithm misidentified African American individuals as high risk offenders much more than white Americans. The study showed that 45% of African Americans were incorrectly classified as high risk whereas only 23% of white individuals were misclassified the same way. Conversely, white individuals were labeled low risk much more often than their African American counterparts.
+
+This bias is due to the algorithm's training set. The algorithm used historic criminal data which is heavily tainted by unethical law enforcement practices which saw the disproportionate incarceration of African Americans compared to white Americans. This occurred due to over-policing in minority communities which led to many more arrests. Consequently, the COMPAS algorithm was trained on this biased data, which led to the unbalanced results in recidivism prediction.
+
+Furthermore, COMPAS is a proprietary tool which was developed by Northpointe. Northpointe has not disclosed the workings on the algorithm which means its not subject to peer criticism, an important step which allows the the community to verify the results of any algorithm, especially ones with as much importance as COMPAS. Without access to the methodology, it is impossible to assess and fix potential biases. With these issues of statistical fairness, I believe the COMPAS algorithm has no place in the courtroom and should not be used in determining parole.
+
+From a philosophical standpoint, the use of COMPAS in parole decisions raises serious ethical questions. First, the principles of due process and the right to a fair trial are undermined. By letting an algorithm have any part in a trial, even if it is an extremely small factor, the justice system's integrity starts to falter. Judges are appointed to uphold the law and ensure a fair trial. By employing an algorithm like COMPAS, the failures of the algorithm will start to influence the verdicts and ultimately ruin the sanctity of the court.
+
+John Rawls' theory of justice emphasizes the importance of fairness and the "veil of ignorance." This suggests that just decisions should be made without knowledge of one's personal characteristics. The use of COMPAS clearly contradicts this principle by furthering historical societal biases into the verdicts delivered by our justice system which is clearly unacceptable.
+
+Finally, Immanuel Kant's moral philosophy advocates for treating individuals as ends in themselves, not merely as means to an end. Relying on an unverified algorithm to determine and individuals recidivism risk reduces people to data points and statistical probabilities, neglecting their inherent dignity, agency, and the unique circumstances of their cases, also violating due process.
+
+In conclusion, the use of the COMPAS algorithm in parole decision-making is proven to be riddled with significant statistical and philosophical issues. The algorithm was statistically proven to hold biases against racial groups. These issues compound and undermine the algorithm's claimed reliability and fairness. Philosophically, its use is a direct violation of the basic principles of justice, equality, and respect for individual rights. Therefore, I believe the use of COMPAS for parole decisions is not warranted. Upholding the integrity of the judicial system is crucial, and therefore the system requires tools and methods that are transparent, fair, and free from any biases. By foregoing the use of COMPAS, the justice system will honor the principles upon which is was built, and treat everyone equally under the law.
