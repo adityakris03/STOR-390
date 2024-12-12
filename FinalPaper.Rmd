@@ -1,0 +1,201 @@
+---
+title: "Final Paper: GA-Based Feature Selection for Credit Card Fraud Detection"
+author: "Aditya Krishna"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: 
+  pdf_document:
+    number_sections: true
+fontsize: 12pt
+---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+library(tidyverse)
+library(randomForest)
+library(GA)
+library(pROC)
+library(kableExtra)
+library(ggplot2)
+library(reshape2)
+set.seed(123)
+```
+
+# Introduction
+
+Credit card fraud represents a significant challenge for financial institutions worldwide. With billions of daily transactions, even a small fraction of fraudulent activities can lead to substantial financial losses for both consumers and credit card providers. Moreover, the increasing reliance on e-commerce magnifies the difficulty of swiftly and accurately identifying fraudulent patterns. High-profile security breaches also raise public anxiety regarding data misuse.
+
+This paper examines a GA-based feature selection approach proposed by Ileberi, Sun, and Wang (2022)1. Their method aims to improve the accuracy and reliability of machine learning (ML) models tasked with detecting fraudulent transactions. By using a genetic algorithm (GA) to select informative subsets of features, the approach may reduce overfitting and enhance predictive metrics like AUC.
+
+However, improved model performance should not overshadow ethical considerations. The collection and analysis of transaction data raise concerns about privacy, fairness, and the trustworthiness of financial institutions. Ensuring that improved fraud detection does not come at the cost of violating consumer rights or introducing biases is a pressing normative issue.
+
+# Analysis of Methods
+Data Loading and Preliminary Analysis
+We use the widely studied European credit card fraud dataset from Kaggle. It contains 284,807 transactions and a binary target (Class) indicating fraud (1) or non-fraud (0). Due to runtime concerns, we will sample a fraction of the data.
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+data <- read_csv("creditcard.csv")
+
+
+# Class distribution
+class_dist <- table(data$Class)
+kable(class_dist, caption = "Class Distribution (Full Data)") %>%
+  kable_styling(full_width = FALSE)
+
+# Proportion of fraud cases
+prop_fraud <- round((class_dist[2]/sum(class_dist))*100, 3)
+prop_fraud
+
+```
+
+As known, the dataset is highly imbalanced, with fraud cases making up a very small fraction of the transactions.
+
+To speed up computations, we sample 10% of the data from each class. This reduces runtime at the cost of some precision.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+data_sample <- data %>% 
+  group_by(Class) %>% 
+  sample_frac(0.1) %>% 
+  ungroup()
+
+# Check the class distribution again
+class_dist_sample <- table(data_sample$Class)
+kable(class_dist_sample, caption = "Class Distribution (Sampled Data)") %>%
+  kable_styling(full_width = FALSE)
+
+```
+
+
+##Exploratory Visualizations
+##Transaction Amount Distribution
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(data_sample, aes(x=Amount, fill=as.factor(Class))) +
+  geom_histogram(bins=30, position="identity", alpha=0.7) +
+  scale_fill_manual(values=c("blue","red"), labels=c("Non-Fraud", "Fraud")) +
+  labs(title="Transaction Amount Distribution", x="Amount", y="Count", fill="Class") +
+  theme_minimal()
+
+```
+
+Fraudulent transactions often differ in typical amount distributions, though not always clearly.
+
+Correlation Heatmap (Sampled Data)
+The dataset’s features (V1 to V28) are already transformed by PCA. Still, we can visualize correlations:
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+feat_cols <- setdiff(colnames(data_sample), c("Class","Time"))
+corr_mat <- cor(data_sample[, feat_cols])
+melted_corr <- melt(corr_mat)
+ggplot(melted_corr, aes(Var1, Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient2(low="blue", high="red", mid="white", midpoint=0) +
+  theme(axis.text.x = element_text(angle = 90, hjust=1)) +
+  labs(title="Feature Correlation Heatmap", x="", y="", fill="Correlation")
+
+```
+
+GA-Based Feature Selection Explained
+Genetic Algorithms (GAs) simulate natural selection to find optimal solutions. For feature selection, a GA represents a subset of features as a binary vector (1 = include, 0 = exclude), evaluates its "fitness" (e.g., model AUC), and evolves the population over generations. The paper by Ileberi et al. reports improved accuracy using GA-based selection compared to non-optimized subsets.
+
+To demonstrate the concept, we implement a GA-based feature selection using a Random Forest model. The fitness function takes a binary vector indicating which features to use, trains a RF on the training set, and evaluates AUC on the test set.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(123)
+train_indices <- sample(nrow(data_sample), 0.7 * nrow(data_sample))
+train_data <- data_sample[train_indices, ]
+test_data  <- data_sample[-train_indices, ]
+
+feature_names <- setdiff(colnames(data_sample), "Class")
+
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+fitness_function <- function(bits) {
+  selected_features <- feature_names[which(bits == 1)]
+  if (length(selected_features) == 0) return(0)
+  
+  model <- randomForest(as.factor(Class) ~ ., 
+                        data = train_data[, c("Class", selected_features)],
+                        ntree = 50,
+                        importance = FALSE)
+  
+  preds <- predict(model, test_data[, c("Class", selected_features)], type="prob")[,2]
+  auc_val <- auc(test_data$Class, preds)
+  return(as.numeric(auc_val))
+}
+
+```
+
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+run_ga <- function(popSize=20, mutationProb=0.1, maxGenerations=10) {
+  ga_out <- ga(type = "binary",
+               fitness = fitness_function,
+               nBits = length(feature_names),
+               popSize = popSize,
+               pmutation = mutationProb,
+               maxiter = maxGenerations,
+               run = 5,
+               keepBest = TRUE,
+               elitism = 1)
+  return(ga_out)
+}
+
+```
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+param_grid <- expand.grid(popSize = 20,
+                          mutationProb = 0.1,
+                          maxGenerations = 10,
+                          stringsAsFactors = FALSE)
+
+results_list <- list()
+for (i in seq_len(nrow(param_grid))) {
+  params <- param_grid[i, ]
+  cat("Running GA with popSize =", params$popSize,
+      ", mutationProb =", params$mutationProb,
+      ", maxGenerations =", params$maxGenerations, "\n")
+  
+  ga_res <- run_ga(popSize = params$popSize,
+                   mutationProb = params$mutationProb,
+                   maxGenerations = params$maxGenerations)
+  
+  best_auc <- ga_res@fitnessValue
+  
+  results_list[[i]] <- data.frame(popSize = params$popSize,
+                                  mutationProb = params$mutationProb,
+                                  maxGenerations = params$maxGenerations,
+                                  bestAUC = best_auc)
+}
+
+param_results <- bind_rows(results_list)
+param_results %>%
+  kable(caption = "GA Parameter Sensitivity Results") %>%
+  kable_styling(full_width = FALSE)
+
+```
+
+# Analysis of Normative Considerations
+While GA-based feature selection can enhance a model’s technical performance, implementing such methods in real-world financial systems raises serious normative questions. Privacy, fairness, and trust are at the core of these concerns and are not peripheral considerations, but integral components of ethical and sustainable ML deployment.
+
+Credit card transactions contain sensitive information. Using them to train sophisticated models—and sharing such data with third-party researchers or vendors—can jeopardize consumer privacy. Even anonymized or aggregated data carries a re-identification risk. Institutions must enforce stringent data governance protocols, such as secure data storage, encryption, and strict access controls. They should also consider implementing differential privacy techniques to protect individual identities, ensuring that improvements in fraud detection do not lead to invasive data collection or breaches.
+
+Algorithms may inadvertently reflect or exacerbate existing social biases. Certain demographic groups could be disproportionately flagged as suspicious if the training data or feature selection process encodes historical prejudices. Fairness auditing tools, bias mitigation techniques, and ongoing performance monitoring can help ensure that no subgroup is systematically disadvantaged. Introducing fairness constraints into the GA’s fitness function may balance predictive performance with the moral imperative to avoid discriminatory outcomes.
+
+Financial institutions have a fiduciary and moral responsibility to maintain the trust of their customers. High-performing fraud detection models that raise fewer false alarms and accurately catch fraudulent transactions can bolster customer confidence. However, transparency about how these models operate and the safeguards protecting consumer interests is crucial. Clear communication about why certain transactions are flagged and adherence to regulatory frameworks that protect consumer rights will help sustain trust. Trust, in this context, is both a practical and an ethical requirement—without it, even accurate models risk damaging the long-term relationship between institutions and their clients.
+
+Ultimately, normative considerations are not constraints that oppose technological advancement. Instead, they ensure that improvements in ML-based fraud detection align with societal values, enhance social welfare, and maintain a fair and respectful marketplace.
+
+
+
+# Conclusion
+This paper reviewed a GA-based feature selection method for credit card fraud detection. The approach can yield better model performance by evolving subsets of features. We demonstrated a simplified, faster version of this methodology, showing that GA parameters can influence outcomes and that careful tuning is essential.
+
+However, these technical gains must be pursued ethically. Privacy protection, fairness, and trust are central moral considerations. Future work could incorporate fairness metrics into the GA’s fitness function, apply privacy-preserving techniques, and conduct statistical tests to ensure that improvements are both robust and ethically justifiable. Ultimately, successful credit card fraud detection is not only a technical achievement but a moral imperative to serve and protect consumers.
+
+\newpage
+
+References
+
+Ileberi, E., Sun, Y. & Wang, Z. A machine learning based credit card fraud detection using the GA algorithm for feature selection. J Big Data 9, 24 (2022). https://doi.org/10.1186/s40537-022-00573-8
